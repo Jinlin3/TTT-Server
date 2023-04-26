@@ -2,7 +2,12 @@
 #include <stdlib.h>
 #include <ctype.h>
 #include <time.h>
+#include <unistd.h>
 #include <string.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <netdb.h>
 
 // Global Variables
 
@@ -21,13 +26,49 @@ char checkWinner();
 void printResult(char);
 void switchPlayer();
 
+void error(const char *msg) {
+    perror(msg);
+    exit(1);
+}
+
 int main(int argc, char** argv) {
-/*  if (argc < 3) {
-        printf("error: Not enough arguments for ttt.c\n");
+
+    if (argc < 3) {
+        error("Error: not enough argument for ttt.c");
     }
+
+    char buffer[255];
+    int sockfd, portno, n;
+    struct sockaddr_in serv_addr;
+    struct hostent *server;
+
     char* domainName = argv[1];
-    char* portNumber = argv[2];
-*/
+    portno = atoi(argv[2]);
+
+    // SOCKET
+
+    sockfd = socket(AF_INET, SOCK_STREAM, 0);
+
+    if (sockfd < 0) {
+        error("Error opening socket");
+    }
+
+    server = gethostbyname(argv[1]);
+    if (server == NULL) {
+        error("Error, no such host");
+    }
+
+    bzero((char*) &serv_addr, sizeof(serv_addr));
+    serv_addr.sin_family = AF_INET;
+    bcopy((char*) server->h_addr, (char*) &serv_addr.sin_addr.s_addr, server->h_length);
+    serv_addr.sin_port = htons(portno);
+
+    // CONNECT
+
+    if (connect(sockfd, (struct sockaddr*) &serv_addr, sizeof(serv_addr)) < 0) {
+        error("Connection failure");
+    }
+
 
     char winner = ' '; 
     curPlayer = PLAYER1;
