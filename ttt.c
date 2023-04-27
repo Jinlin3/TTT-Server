@@ -8,13 +8,10 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netdb.h>
-#include "string_utils.h"
 
 // Global Variables
 
 char board[3][3];
-const char PLAYER1 = 'X';
-const char PLAYER2 = 'O';
 char player; // server will assign this client X or O
 
 // Prototypes
@@ -22,6 +19,7 @@ char player; // server will assign this client X or O
 void resetBoard();
 void printBoard();
 void printResult(char);
+char** split(char*, char*);
 
 void error(const char *msg) {
     perror(msg);
@@ -29,6 +27,8 @@ void error(const char *msg) {
 }
 
 int main(int argc, char** argv) {
+
+    char** array;
 
     if (argc < 3) {
         error("Error: not enough argument for ttt.c");
@@ -79,7 +79,6 @@ int main(int argc, char** argv) {
     line[strcspn(line, "\n")] = 0;
     len = strlen(line) + 1;
 
-    char temp;
     sprintf(buffer, "PLAY|%d|%s|", len, line);
 
     n = write(sockfd, buffer, strlen(buffer));
@@ -94,13 +93,26 @@ int main(int argc, char** argv) {
         error("Error on reading");
     }
     printf("%s\n", buffer);
-    return 0;
 
     /*
         END OF SECTION
     */
 
-    // MESSAGE LOOP
+    // BEGN
+
+    bzero(buffer, 255);
+    n = read(sockfd, buffer, 255);
+    if (n < 0) {
+        error("Error on reading");
+    }
+    printf("%s\n", buffer);
+
+    array = split(buffer, "|");
+    char* CURPLAYER = array[2];
+
+    return 0;
+
+    // GAME COMMENCES
 
     char winner = ' '; 
     resetBoard();
@@ -144,4 +156,26 @@ void printResult(char winner) {
         printf("TIE GAME!\n");
     }
     return;
+}
+
+char** split(char* string, char* delim) {
+    
+    char** tokens = malloc(sizeof(char*) * 64);
+    char* token;
+    int pos = 0;
+
+    if (!tokens) {
+        printf("split function has failed");
+        exit(1);
+    }
+
+    token = strtok(string, delim);
+    while (token != NULL) {
+        tokens[pos] = token;
+        pos++;
+        token = strtok(NULL, delim);
+    }
+    tokens[pos] = NULL;
+    return tokens;
+
 }

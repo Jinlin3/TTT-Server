@@ -8,7 +8,6 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netdb.h>
-#include "string_utils.h"
 
 // GLOBAL VARIABLES
 
@@ -25,6 +24,7 @@ void playerXMove(int, int);
 void playerOMove(int, int);
 char checkWinner();
 void printResult(char);
+char** split(char* string, char* delim);
 
 void error(const char *msg) {
     perror(msg);
@@ -32,6 +32,10 @@ void error(const char *msg) {
 }
 
 int main(int argc, char** argv) {
+
+    char** array1; // stores messages sent by client 1
+    char** array2; // stores messages sent by client 2
+
     if (argc < 2) {
         fprintf(stderr, "Port number not provided. Program terminated.\n");
         exit(1);
@@ -86,6 +90,11 @@ int main(int argc, char** argv) {
         THIS SECTION WILL CONNECT WITH THE CLIENTS AND SEND WAIT
     */
 
+    char player1[64];
+    char player2[64];
+
+    // PLAYER 1 CONNECTION
+
     bzero(buffer, 255); // clears the buffer
 
     n = read(newsockfd1, buffer, 255); // reads from client
@@ -93,6 +102,8 @@ int main(int argc, char** argv) {
         error("Error on read");
     }
     printf("%s\n", buffer);
+    array1 = split(buffer, "|");
+    strcpy(player1, array1[2]);
 
     bzero(buffer, 255); // clears the buffer
 
@@ -103,6 +114,8 @@ int main(int argc, char** argv) {
     }
     printf("%s\n", buffer);
 
+    // PLAYER 2 CONNECTION
+
     bzero(buffer, 255); // clears the buffer
 
     n = read(newsockfd2, buffer, 255); // reads from client
@@ -110,6 +123,8 @@ int main(int argc, char** argv) {
         error("Error on read");
     }
     printf("%s\n", buffer);
+    array2 = split(buffer, "|");
+    strcpy(player2, array2[2]);
 
     bzero(buffer, 255); // clears the buffer
 
@@ -124,15 +139,43 @@ int main(int argc, char** argv) {
         END OF SECTION
     */
 
+    /*
+        GAME BEGINS BELOW
+        newsockfd1 = X
+        newsockfd2 = O
+    */
+
+    // BEGN PLAYER1
+
+    bzero(buffer, 255); // clears the buffer
+    sprintf(buffer, "BEGN|%lu|X|%s|", strlen(player2) + 1, player2);
+    n = write(newsockfd1, buffer, strlen(buffer));
+    if (n < 0) {
+        error("Error on write");
+    }
+    printf("%s\n", buffer);
+
+    // BEGN PLAYER2
+
+    bzero(buffer, 255); // clears the buffer
+    sprintf(buffer, "BEGN|%lu|O|%s|", strlen(player1) + 1, player1);
+    n = write(newsockfd2, buffer, strlen(buffer));
+    if (n < 0) {
+        error("Error on write");
+    }
+    printf("%s\n", buffer);
+
     return 0;
 
+    /*
+        GAME COMMENCES
+    */
+
     int row, col;
-    char winner = ' '; 
+    char winner = '.'; 
     resetBoard();
 
-    // GAME LOOP
-
-    while(winner == ' ' && checkFreeSpaces() != 0) { // while there is no winner and there are free spaces...
+    while(winner == '.' && checkFreeSpaces() != 0) { // while there is no winner and there are free spaces...
 
         printBoard();
 
@@ -292,4 +335,26 @@ void printResult(char winner) {
         printf("TIE GAME!\n");
     }
     return;
+}
+
+char** split(char* string, char* delim) {
+    
+    char** tokens = malloc(sizeof(char*) * 64);
+    char* token;
+    int pos = 0;
+
+    if (!tokens) {
+        printf("split function has failed");
+        exit(1);
+    }
+
+    token = strtok(string, delim);
+    while (token != NULL) {
+        tokens[pos] = token;
+        pos++;
+        token = strtok(NULL, delim);
+    }
+    tokens[pos] = NULL;
+    return tokens;
+
 }
