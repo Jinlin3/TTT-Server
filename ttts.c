@@ -37,11 +37,11 @@ int main(int argc, char** argv) {
         exit(1);
     }
 
-    int sockfd, newsockfd, portno, n;
+    int sockfd, newsockfd1, newsockfd2, portno, n;
     char buffer[255];
 
-    struct sockaddr_in serv_addr, cli_addr;
-    socklen_t clilen;
+    struct sockaddr_in serv_addr, cli_addr1, cli_addr2;
+    socklen_t clilen1, clilen2;
 
     // SOCKET
 
@@ -67,13 +67,18 @@ int main(int argc, char** argv) {
     // LISTEN
 
     listen(sockfd, 5);
-    clilen = sizeof(cli_addr);
+
+    clilen1 = sizeof(cli_addr1);
+    clilen2 = sizeof(cli_addr2);
 
     // ACCEPT
 
-    newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
+    newsockfd1 = accept(sockfd, (struct sockaddr *) &cli_addr1, &clilen1);
+    printf("Player 1 found!\n");
+    newsockfd2 = accept(sockfd, (struct sockaddr *) &cli_addr2, &clilen2);
+    printf("Player 2 found!\n");
 
-    if (newsockfd < 0) {
+    if (newsockfd1 < 0 || newsockfd2 < 0) {
         error("Error on accept");
     }
 
@@ -83,7 +88,7 @@ int main(int argc, char** argv) {
 
     bzero(buffer, 255); // clears the buffer
 
-    n = read(newsockfd, buffer, 255); // reads from client
+    n = read(newsockfd1, buffer, 255); // reads from client
     if (n < 0) {
         error("Error on read");
     }
@@ -92,11 +97,34 @@ int main(int argc, char** argv) {
     bzero(buffer, 255); // clears the buffer
 
     strcpy(buffer, "WAIT|0|");
-    n = write(newsockfd, buffer, strlen(buffer)); // writes to client
+    n = write(newsockfd1, buffer, strlen(buffer)); // writes to client
     if (n < 0) {
         error("Error on write");
     }
     printf("%s\n", buffer);
+
+    bzero(buffer, 255); // clears the buffer
+
+    n = read(newsockfd2, buffer, 255); // reads from client
+    if (n < 0) {
+        error("Error on read");
+    }
+    printf("%s\n", buffer);
+
+    bzero(buffer, 255); // clears the buffer
+
+    strcpy(buffer, "WAIT|0|");
+    n = write(newsockfd2, buffer, strlen(buffer)); // writes to client
+    if (n < 0) {
+        error("Error on write");
+    }
+    printf("%s\n", buffer);
+
+    /*
+        END OF SECTION
+    */
+
+    return 0;
 
     int row, col;
     char winner = ' '; 
@@ -139,7 +167,7 @@ int main(int argc, char** argv) {
 
         // READ
 
-        n = read(newsockfd, buffer, 255);
+        n = read(newsockfd1, buffer, 255);
         if (n < 0) {
             error("Error on read");
         }
@@ -150,7 +178,7 @@ int main(int argc, char** argv) {
         // WRITE
 
         fgets(buffer, 255, stdin); // reads bytes from input stream
-        n = write(newsockfd, buffer, strlen(buffer));
+        n = write(newsockfd1, buffer, strlen(buffer));
         if (n < 0) {
             error("Error on write");
         }
@@ -160,7 +188,7 @@ int main(int argc, char** argv) {
         }
     }
 
-    close(newsockfd);
+    close(newsockfd1);
     close(sockfd);
     return 0;
 }

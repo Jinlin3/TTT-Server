@@ -66,7 +66,9 @@ int main(int argc, char** argv) {
         error("Connection failure");
     }
 
-    // SENDS PLAY TO SERVER and RECEIVES WAIT
+    /*
+        THIS SECTION WILL ESTABLISH CONNECTION WITH THE SERVER
+    */
 
     bzero(buffer, 255);
     char line[50];
@@ -93,6 +95,10 @@ int main(int argc, char** argv) {
     }
     printf("%s\n", buffer);
     return 0;
+
+    /*
+        END OF SECTION
+    */
 
     // MESSAGE LOOP
 
