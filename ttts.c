@@ -14,18 +14,16 @@
 char board[3][3];
 const char PLAYER1 = 'X';
 const char PLAYER2 = 'O';
-char curPlayer;
 
 // PROTOTYPES
 
 void resetBoard();
-char* getBoardString();
 void printBoard();
 int checkFreeSpaces();
-void playerMove();
+void playerXMove(int, int);
+void playerOMove(int, int);
 char checkWinner();
 void printResult(char);
-void switchPlayer();
 
 void error(const char *msg) {
     perror(msg);
@@ -78,25 +76,65 @@ int main(int argc, char** argv) {
         error("Error on accept");
     }
 
+    // SENDS WAIT TO CLIENT
+
+    bzero(buffer, 255); // clears the buffer
+
+    // READ
+
+    n = read(newsockfd, buffer, 255);
+    if (n < 0) {
+        error("Error on read");
+    }
+    printf("%s\n", buffer);
+
+    bzero(buffer, 255); // clears the buffer
+
+    // WRITE
+    strcpy(buffer, "WAIT|0|");
+    n = write(newsockfd, buffer, strlen(buffer));
+    if (n < 0) {
+        error("Error on write");
+    }
+    printf("%s\n", buffer);
+    return 0; 
+
+    int row, col;
     char winner = ' '; 
-    curPlayer = PLAYER1;
     resetBoard();
 
     // GAME LOOP
 
     while(winner == ' ' && checkFreeSpaces() != 0) { // while there is no winner and there are free spaces...
+
         printBoard();
-        playerMove();
+
+        // RECEIVES INFO FROM PLAYER 1
+
+        // ---------------------------
+
+        playerXMove(row, col);
         winner = checkWinner();
-        if (winner != ' ' || checkFreeSpaces() == 0) {
+        if (winner != '.' || checkFreeSpaces() == 0) {
             break;
         }
-        switchPlayer();
+
+        // RECEIVES INFO FROM PLAYER 2
+
+        // ---------------------------
+
+        playerOMove(row, col);
+        winner = checkWinner();
+        if (winner != '.' || checkFreeSpaces() == 0) {
+            break;
+        }
     }
     printBoard();
     printResult(winner);
 
-    while(1) { // loops until game ends
+    // EXAMPLE LOOP
+
+    while(1) {
 
         bzero(buffer, 255); // clears the buffer
 
@@ -138,13 +176,6 @@ void resetBoard() {
     return;
 }
 
-char* getBoardString() {
-
-    char* board = " %c | %c | %c \n---|---|---\n %c | %c | %c \n---|---|---\n %c | %c | %c \n";
-    return board;
-
-}
-
 void printBoard() {
 
     printf(" %c | %c | %c ", board[0][0], board[0][1], board[0][2]);
@@ -168,31 +199,41 @@ int checkFreeSpaces() {
     return freeSpaces;
 }
 
-void playerMove() {
-    int x;
-    int y;
+void playerXMove(int row, int col) {
     do {
 
-        printf("Enter row number: ");
-        scanf("%d", &x);
-        x--;
+        row--;
+        col--;
 
-        printf("Enter column number: ");
-        scanf("%d", &y);
-        y--;
-
-        if (board[x][y] != ' ') {
+        if (board[row][col] != '.') {
             printf("Invalid move: position is already taken!\n");
         } else {
-            board[x][y] = curPlayer;
+            board[row][col] = PLAYER1;
             break;
         }
 
-    } while (board[x][y] != ' ');
+    } while (board[row][col] != '.');
 
 }
 
-char checkWinner() {
+void playerOMove(int row, int col) {
+    do {
+
+        row--;
+        col--;
+
+        if (board[row][col] != '.') {
+            printf("Invalid move: position is already taken!\n");
+        } else {
+            board[row][col] = PLAYER2;
+            break;
+        }
+
+    } while (board[row][col] != '.');
+
+}
+
+char checkWinner() { // returns the mark of the winner (otherwise returns nothing)
     // Check for row win
     for (int i = 0; i < 3; i++) {
         if (board[i][0] == board[i][1] && board[i][0] == board[i][2]) {
@@ -212,7 +253,7 @@ char checkWinner() {
     if (board[0][2] == board[1][1] && board[0][2] == board[2][0]) {
         return board[0][2];
     }
-    return ' ';
+    return '.';
 }
 
 void printResult(char winner) {
@@ -222,15 +263,6 @@ void printResult(char winner) {
         printf("PLAYER 2 WINS\n");
     } else {
         printf("TIE GAME!\n");
-    }
-    return;
-}
-
-void switchPlayer() {
-    if (curPlayer == 'X') {
-        curPlayer = PLAYER2;
-    } else {
-        curPlayer = PLAYER1;
     }
     return;
 }
