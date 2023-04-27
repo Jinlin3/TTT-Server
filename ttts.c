@@ -14,17 +14,19 @@
 char board[3][3];
 const char PLAYER1 = 'X';
 const char PLAYER2 = 'O';
+char buffer[255];
 
 // PROTOTYPES
 
 void resetBoard();
 void printBoard();
+char* boardString();
 int checkFreeSpaces();
-void playerXMove(int, int);
-void playerOMove(int, int);
+int playerMove(int, int, char);
 char checkWinner();
 void printResult(char);
 char** split(char* string, char* delim);
+int interpret(char);
 
 void error(const char *msg) {
     perror(msg);
@@ -42,7 +44,6 @@ int main(int argc, char** argv) {
     }
 
     int sockfd, newsockfd1, newsockfd2, portno, n;
-    char buffer[255];
 
     struct sockaddr_in serv_addr, cli_addr1, cli_addr2;
     socklen_t clilen1, clilen2;
@@ -165,71 +166,65 @@ int main(int argc, char** argv) {
     }
     printf("%s\n", buffer);
 
-    return 0;
-
     /*
         GAME COMMENCES
     */
 
-    int row, col;
+    int row, col, success;
     char winner = '.'; 
     resetBoard();
 
     while(winner == '.' && checkFreeSpaces() != 0) { // while there is no winner and there are free spaces...
 
         printBoard();
-
-        // RECEIVES INFO FROM PLAYER 1
-
-        // ---------------------------
-
-        playerXMove(row, col);
+        // PLAYER 1's MOVE
+        do {
+            bzero(buffer, 255);
+            n = read(newsockfd1, buffer, 255);
+            if (n < 0) {
+                error("Error on read");
+            }
+            printf("%s\n", buffer);
+            success = interpret('X');
+            
+            bzero(buffer, 255);
+            n = write(newsockfd1, buffer, strlen(buffer));
+            if (n < 0) {
+                error("Error on write");
+            }
+            printf("%s\n", buffer);
+        } while (success != 0);
+        // CHECK FOR WINNER
         winner = checkWinner();
         if (winner != '.' || checkFreeSpaces() == 0) {
             break;
         }
+        // PLAYER 2's MOVE
+        do {
+            bzero(buffer, 255);
+            n = read(newsockfd2, buffer, 255);
+            if (n < 0) {
+                error("Error on read");
+            }
+            printf("%s\n", buffer);
+            success = interpret('O');
 
-        // RECEIVES INFO FROM PLAYER 2
-
-        // ---------------------------
-
-        playerOMove(row, col);
+            bzero(buffer, 255);
+            n = write(newsockfd2, buffer, strlen(buffer));
+            if (n < 0) {
+                error("Error on write");
+            }
+            printf("%s\n", buffer);
+        } while (success != 0);
+        // CHECK FOR WINNER
         winner = checkWinner();
         if (winner != '.' || checkFreeSpaces() == 0) {
             break;
         }
     }
+
     printBoard();
     printResult(winner);
-
-    // EXAMPLE LOOP
-
-    while(1) {
-
-        bzero(buffer, 255); // clears the buffer
-
-        // READ
-
-        n = read(newsockfd1, buffer, 255);
-        if (n < 0) {
-            error("Error on read");
-        }
-        printf("%s\n", buffer);
-
-        bzero(buffer, 255); // clears the buffer
-
-        // WRITE
-
-        fgets(buffer, 255, stdin); // reads bytes from input stream
-        n = write(newsockfd1, buffer, strlen(buffer));
-        if (n < 0) {
-            error("Error on write");
-        }
-        int i = strncmp("Bye", buffer, 3);
-        if(i == 0) {
-            break;
-        }
-    }
 
     close(newsockfd1);
     close(sockfd);
@@ -257,6 +252,14 @@ void printBoard() {
     return;
 }
 
+char* boardString() {
+
+    char* string;
+    sprintf(string, " %c | %c | %c \n---|---|---\n %c | %c | %c \n---|---|---\n %c | %c | %c \n", board[0][0], board[0][1], board[0][2], board[1][0], board[1][1], board[1][2], board[2][0], board[2][1], board[2][2]);
+    return string;
+
+}
+
 int checkFreeSpaces() {
     int freeSpaces = 9;
     for (int i = 0; i < 3; i++) {
@@ -269,37 +272,35 @@ int checkFreeSpaces() {
     return freeSpaces;
 }
 
-void playerXMove(int row, int col) {
-    do {
+/*
+    This function is used to receive the coordinates of a desired move and then determine whether it's
+    legal. It will then fill the buffer with an appropriate message to send back to the client.
+*/
 
-        row--;
-        col--;
+int playerMove(int row, int col, char mark) {
 
-        if (board[row][col] != '.') {
-            printf("Invalid move: position is already taken!\n");
-        } else {
-            board[row][col] = PLAYER1;
-            break;
-        }
+    int n;
+    int success = 0;
+    row--;
+    col--;
 
-    } while (board[row][col] != '.');
+    bzero(buffer, 255);
 
-}
+    if (board[row][col] != '.') { // INVALID MOVE
 
-void playerOMove(int row, int col) {
-    do {
+        success = 1;
+        char* errorString = "Invalid move: position is already taken!";
+        sprintf(buffer, "INVL|%lu|%s|", strlen(errorString) + 1, errorString);
 
-        row--;
-        col--;
+    } else { // VALID MOVE
 
-        if (board[row][col] != '.') {
-            printf("Invalid move: position is already taken!\n");
-        } else {
-            board[row][col] = PLAYER2;
-            break;
-        }
+        board[row][col] = mark;
+        char* board = boardString();
+        sprintf(buffer, "MOVD|%lu|%d,%d|%s|", strlen(board) + 5, row, col, board);
 
-    } while (board[row][col] != '.');
+    }
+
+    return success;
 
 }
 
@@ -356,5 +357,36 @@ char** split(char* string, char* delim) {
     }
     tokens[pos] = NULL;
     return tokens;
+
+}
+
+/*
+    This function is used to do several things:
+    1. To read the message from the client and then react accordingly
+    2. To fill the buffer with an appropriate message to send back to the client
+
+    Note: everything to do with sockets is done in the main function, therefore the only thing we can do is
+    change the contents of the buffer.
+*/
+
+int interpret(char playerMark) {
+
+    int success = 0;
+    char** tokens = split(buffer, "|");
+
+    if (strcmp(tokens[0], "MOVE") == 0) {
+        
+        char** pos = split(tokens[3], ",");
+        int row = atoi(pos[0]);
+        int col = atoi(pos[1]);
+        success = playerMove(row, col, playerMark);
+
+    } else if (strcmp(tokens[0], "RSGN") == 0) {
+        
+    } else { // Last case: DRAW
+        
+    }
+
+    return success;
 
 }
