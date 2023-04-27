@@ -109,7 +109,7 @@ int main(int argc, char** argv) {
     printf("%s\n", buffer);
 
     array = split(buffer, "|");
-    playerMark = array[2];
+    playerMark = *array[2];
 
     // GAME COMMENCES
 
@@ -203,6 +203,37 @@ char** split(char* string, char* delim) {
 
 void action() {
 
+    int choice;
+    int success = 0;
 
+    do {
+        printf("Select a move: (1-3)\n");
+        printf("1) MOVE\n");
+        printf("2) RSGN\n");
+        printf("3) DRAW\n");
+
+        scanf("%d", &choice);
+
+        if (choice == 1) { // MOVE
+            int row;
+            int col;
+
+            printf("Enter row #(1-3): ");
+            scanf("%d", &row);
+            printf("Enter col #(1-3): ");
+            scanf("%d", &col);
+
+            bzero(buffer, 255);
+            sprintf(buffer, "MOVE|6|%c|%d,%d|", playerMark, row, col);
+
+            success = 0;
+        } else if (choice == 2) { // RSGN
+            success = 0;
+        } else if (choice == 3) { // DRAW
+            success = 0;
+        } else { // INVALID INPUT; LOOP AGAIN
+            success = 1;
+        }
+    } while (success != 0);
     
 }

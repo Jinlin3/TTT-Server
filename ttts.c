@@ -25,7 +25,7 @@ int checkFreeSpaces();
 int playerMove(int, int, char);
 char checkWinner();
 void printResult(char);
-char** split(char* string, char* delim);
+char** split(char*, char*);
 int interpret(char);
 
 void error(const char *msg) {
@@ -170,11 +170,11 @@ int main(int argc, char** argv) {
         GAME COMMENCES
     */
 
-    int row, col, success;
-    char winner = '.'; 
+    int success; // 0 - good; 1 - bad | used for controlling the do-while loop
+    char winner = ' '; 
     resetBoard();
 
-    while(winner == '.' && checkFreeSpaces() != 0) { // while there is no winner and there are free spaces...
+    while(winner == ' ' && checkFreeSpaces() != 0) { // while there is no winner and there are free spaces...
 
         printBoard();
         // PLAYER 1's MOVE
@@ -195,8 +195,9 @@ int main(int argc, char** argv) {
             printf("%s\n", buffer);
         } while (success != 0);
         // CHECK FOR WINNER
+        printf("Checking for winner\n");
         winner = checkWinner();
-        if (winner != '.' || checkFreeSpaces() == 0) {
+        if (winner != ' ' || checkFreeSpaces() == 0) {
             break;
         }
         // PLAYER 2's MOVE
@@ -217,8 +218,9 @@ int main(int argc, char** argv) {
             printf("%s\n", buffer);
         } while (success != 0);
         // CHECK FOR WINNER
+        printf("Checking for winner\n");
         winner = checkWinner();
-        if (winner != '.' || checkFreeSpaces() == 0) {
+        if (winner != ' ' || checkFreeSpaces() == 0) {
             break;
         }
     }
@@ -254,7 +256,7 @@ void printBoard() {
 
 char* boardString() {
 
-    char* string;
+    char* string = "";
     sprintf(string, " %c | %c | %c \n---|---|---\n %c | %c | %c \n---|---|---\n %c | %c | %c \n", board[0][0], board[0][1], board[0][2], board[1][0], board[1][1], board[1][2], board[2][0], board[2][1], board[2][2]);
     return string;
 
@@ -264,7 +266,7 @@ int checkFreeSpaces() {
     int freeSpaces = 9;
     for (int i = 0; i < 3; i++) {
         for (int j = 0; j < 3; j++) {
-            if (board[i][j] != ' ') {
+            if (board[i][j] != '.') {
                 freeSpaces--;
             }
         }
@@ -279,7 +281,6 @@ int checkFreeSpaces() {
 
 int playerMove(int row, int col, char mark) {
 
-    int n;
     int success = 0;
     row--;
     col--;
@@ -305,26 +306,27 @@ int playerMove(int row, int col, char mark) {
 }
 
 char checkWinner() { // returns the mark of the winner (otherwise returns nothing)
+    char blank = '.';
     // Check for row win
     for (int i = 0; i < 3; i++) {
-        if (board[i][0] == board[i][1] && board[i][0] == board[i][2]) {
+        if (strcmp(&board[i][0], &blank) != 0 && board[i][0] == board[i][1] && board[i][0] == board[i][2]) {
             return board[i][0];
         }
     }
     // Check for col win
     for (int i = 0; i < 3; i++) {
-        if (board[0][i] == board[1][i] && board[0][i] == board[2][i]) {
+        if (strcmp(&board[0][i], &blank) != 0 && board[0][i] == board[1][i] && board[0][i] == board[2][i]) {
             return board[0][i];
         }
     }
     // Check for diag win
-    if (board[0][0] == board[1][1] && board[0][0] == board[2][2]) {
+    if (strcmp(&board[0][0], &blank) != 0 && board[0][0] == board[1][1] && board[0][0] == board[2][2]) {
         return board[0][0];
     }
-    if (board[0][2] == board[1][1] && board[0][2] == board[2][0]) {
+    if (strcmp(&board[0][2], &blank) != 0 && board[0][2] == board[1][1] && board[0][2] == board[2][0]) {
         return board[0][2];
     }
-    return '.';
+    return ' ';
 }
 
 void printResult(char winner) {
