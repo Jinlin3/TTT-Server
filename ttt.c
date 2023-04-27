@@ -12,7 +12,8 @@
 // Global Variables
 
 char board[3][3];
-char player; // server will assign this client X or O
+char playerMark; // server will assign this client X or O
+char buffer[255];
 
 // Prototypes
 
@@ -20,6 +21,7 @@ void resetBoard();
 void printBoard();
 void printResult(char);
 char** split(char*, char*);
+void action();
 
 void error(const char *msg) {
     perror(msg);
@@ -34,7 +36,6 @@ int main(int argc, char** argv) {
         error("Error: not enough argument for ttt.c");
     }
 
-    char buffer[255];
     int sockfd, portno, n;
     struct sockaddr_in serv_addr;
     struct hostent *server;
@@ -50,7 +51,7 @@ int main(int argc, char** argv) {
         error("Error opening socket");
     }
 
-    server = gethostbyname(argv[1]);
+    server = gethostbyname(domainName);
     if (server == NULL) {
         error("Error, no such host");
     }
@@ -108,9 +109,7 @@ int main(int argc, char** argv) {
     printf("%s\n", buffer);
 
     array = split(buffer, "|");
-    char* CURPLAYER = array[2];
-
-    return 0;
+    playerMark = array[2];
 
     // GAME COMMENCES
 
@@ -119,10 +118,28 @@ int main(int argc, char** argv) {
 
     while(1) {
         bzero(buffer, 255);
-        
+        action(); // Player makes their move
+        n = write(sockfd, buffer, strlen(buffer)); // Sends message to server
+        if (n < 0) {
+            error("Error writing");
+        }
+        printf("%s\n", buffer);
+
+        bzero(buffer, 255);
+        n = read(sockfd, buffer, 255); // Reads reaction message from server
+        if (n < 0) {
+            error("Error reading");
+        }
+        printf("%s\n", buffer);
+
+        array = split(buffer, "|");
+        if (strcmp(array[0], "OVER")) { // if the message "OVER" is received, then terminate the loop
+            break;
+        }
     }
     printBoard();
     printResult(winner);
+    close(sockfd);
     return 0;
 }
 
@@ -178,4 +195,14 @@ char** split(char* string, char* delim) {
     tokens[pos] = NULL;
     return tokens;
 
+}
+
+/*
+    This function will let the user make their move
+*/
+
+void action() {
+
+
+    
 }
