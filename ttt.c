@@ -8,6 +8,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netdb.h>
+#include "string_utils.h"
 
 // Global Variables
 
@@ -77,7 +78,7 @@ int main(int argc, char** argv) {
     len = strlen(line) + 1;
 
     char temp;
-    sprintf(buffer, "NAME|%d|%s|", len, line);
+    sprintf(buffer, "PLAY|%d|%s|", len, line);
 
     n = write(sockfd, buffer, strlen(buffer));
     if (n < 0) {

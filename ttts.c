@@ -8,6 +8,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netdb.h>
+#include "string_utils.h"
 
 // GLOBAL VARIABLES
 
@@ -76,13 +77,13 @@ int main(int argc, char** argv) {
         error("Error on accept");
     }
 
-    // SENDS WAIT TO CLIENT
+    /*
+        THIS SECTION WILL CONNECT WITH THE CLIENTS AND SEND WAIT
+    */
 
     bzero(buffer, 255); // clears the buffer
 
-    // READ
-
-    n = read(newsockfd, buffer, 255);
+    n = read(newsockfd, buffer, 255); // reads from client
     if (n < 0) {
         error("Error on read");
     }
@@ -90,14 +91,12 @@ int main(int argc, char** argv) {
 
     bzero(buffer, 255); // clears the buffer
 
-    // WRITE
     strcpy(buffer, "WAIT|0|");
-    n = write(newsockfd, buffer, strlen(buffer));
+    n = write(newsockfd, buffer, strlen(buffer)); // writes to client
     if (n < 0) {
         error("Error on write");
     }
     printf("%s\n", buffer);
-    return 0; 
 
     int row, col;
     char winner = ' '; 
