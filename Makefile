@@ -1,7 +1,11 @@
 CFLAGS = -g -Wall -Wno-nullability-completeness
 
-ttts.o: ttts.c
-	gcc $(CFLAGS) -c ttts.c
+ttts: ttts.c
+	gcc $(CFLAGS) ttts.c -o ttts
 
-ttt.o: ttt.c
-	gcc $(CFLAGS) -c ttt.c
+ttt: ttt.c
+	gcc $(CFLAGS) ttt.c -o ttt
+
+clean:
+	@echo "Removing everything but the source files"
+	@rm ttt.o ttts.o ttt ttts
