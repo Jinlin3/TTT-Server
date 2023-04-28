@@ -19,9 +19,11 @@ char buffer[255];
 
 void resetBoard();
 void printBoard();
+void updateBoard(char*);
 void printResult(char);
 char** split(char*, char*);
 void action();
+int reaction();
 
 void error(const char *msg) {
     perror(msg);
@@ -82,7 +84,7 @@ int main(int argc, char** argv) {
 
     sprintf(buffer, "PLAY|%d|%s|", len, line);
 
-    n = write(sockfd, buffer, strlen(buffer));
+    n = write(sockfd, buffer, 255);
     if (n < 0) {
         error("Error on writing");
     }
@@ -111,34 +113,79 @@ int main(int argc, char** argv) {
     array = split(buffer, "|");
     playerMark = *array[2];
 
-    // GAME COMMENCES
+    /*
+        GAME STARTS BELOW
+    */
 
-    char winner = ' '; 
     resetBoard();
+    int success = 0;
+    int counter = 0;
 
     while(1) {
-        bzero(buffer, 255);
-        action(); // Player makes their move
-        n = write(sockfd, buffer, strlen(buffer)); // Sends message to server
-        if (n < 0) {
-            error("Error writing");
-        }
-        printf("%s\n", buffer);
 
-        bzero(buffer, 255);
-        n = read(sockfd, buffer, 255); // Reads reaction message from server
-        if (n < 0) {
-            error("Error reading");
+        if (playerMark == 'X' && counter == 0) { // print board only if player 1
+            printBoard();
+            counter++;
         }
-        printf("%s\n", buffer);
 
-        array = split(buffer, "|");
-        if (strcmp(array[0], "OVER")) { // if the message "OVER" is received, then terminate the loop
+        if (playerMark == 'O') { // only occurs if this is player 2
+            do {
+                bzero(buffer, 255);
+                n = read(sockfd, buffer, 255);
+                if (n < 0) {
+                    error("Error reading");
+                }
+                printf("PLAYER 1 - %s\n", buffer);
+                success = reaction();
+                printBoard();
+            } while (success == 1); // While INVL
+        }
+
+        if (success == 3) {
             break;
         }
+
+        do { // For handling situations where INVL is received and player needs to go again
+            bzero(buffer, 255);
+            action(); // Player makes their move
+            n = write(sockfd, buffer, 255); // Sends message to server
+            if (n < 0) {
+                error("Error writing");
+            }
+            printf("%s\n", buffer);
+
+            bzero(buffer, 255);
+            n = read(sockfd, buffer, 255); // Reads reaction message from server
+            if (n < 0) {
+                error("Error reading");
+            }
+            printf("%s\n", buffer);
+            success = reaction();
+            printBoard();
+        } while (success == 1);
+        if (success == 3) { // Checks for OVER
+            break;
+        }
+        if (playerMark == 'X') { // only occurs if this is player 1
+            do {
+                bzero(buffer, 255);
+                n = read(sockfd, buffer, 255);
+                if (n < 0) {
+                    error("Error reading");
+                }
+                printf("PLAYER 2 - %s\n", buffer);
+                success = reaction();
+                printBoard();
+            } while (success == 1); // While INVL
+        }
+        if (success == 3) {
+            break;
+        }
+
     }
-    printBoard();
-    printResult(winner);
+
+    printf("GAME OVER!\n");
+
     close(sockfd);
     return 0;
 }
@@ -147,7 +194,7 @@ void resetBoard() {
 
     for (int i = 0; i < 3; i++) {
         for (int j = 0; j < 3; j++) {
-            board[i][j] = ' ';
+            board[i][j] = '.';
         }
     }
     return;
@@ -162,6 +209,19 @@ void printBoard() {
     printf(" %c | %c | %c ", board[2][0], board[2][1], board[2][2]);
     printf("\n");
     return;
+}
+
+void updateBoard(char* boardString) {
+
+    int counter = 0;
+    for (int i = 0; i < 3; i++) {
+        for (int j = 0; j < 3; j++) {
+            board[i][j] = boardString[counter];
+            counter++;
+        }
+    }
+    return;
+
 }
 
 void printResult(char winner) {
@@ -236,4 +296,23 @@ void action() {
         }
     } while (success != 0);
     
+}
+
+/*
+    This function will react to server's message
+*/
+
+int reaction() {
+    char** array = split(buffer, "|");
+    if (strcmp(array[0], "MOVD") == 0) {
+        updateBoard(array[4]);
+        return 0;
+    } else if (strcmp(array[0], "INVL") == 0) {
+        return 1;
+    } else if (strcmp(array[0], "DRAW") == 0) {
+
+    } else { // "OVER"
+        return 3;
+    }
+    return 0;
 }

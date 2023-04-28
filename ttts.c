@@ -24,7 +24,7 @@ char* boardString();
 int checkFreeSpaces();
 int playerMove(int, int, char);
 char checkWinner();
-void printResult(char);
+void printResult(char, char*, char*);
 char** split(char*, char*);
 int interpret(char);
 
@@ -109,7 +109,7 @@ int main(int argc, char** argv) {
     bzero(buffer, 255); // clears the buffer
 
     strcpy(buffer, "WAIT|0|");
-    n = write(newsockfd1, buffer, strlen(buffer)); // writes to client
+    n = write(newsockfd1, buffer, 255); // writes to client
     if (n < 0) {
         error("Error on write");
     }
@@ -130,11 +130,12 @@ int main(int argc, char** argv) {
     bzero(buffer, 255); // clears the buffer
 
     strcpy(buffer, "WAIT|0|");
-    n = write(newsockfd2, buffer, strlen(buffer)); // writes to client
+    n = write(newsockfd2, buffer, 255); // writes to client
     if (n < 0) {
         error("Error on write");
     }
     printf("%s\n", buffer);
+    printf("Both players found!\n");
 
     /*
         END OF SECTION
@@ -146,21 +147,21 @@ int main(int argc, char** argv) {
         newsockfd2 = O
     */
 
-    // BEGN PLAYER1
+    // BEGN PLAYER2
 
     bzero(buffer, 255); // clears the buffer
-    sprintf(buffer, "BEGN|%lu|X|%s|", strlen(player2) + 1, player2);
-    n = write(newsockfd1, buffer, strlen(buffer));
+    sprintf(buffer, "BEGN|%lu|O|%s|", strlen(player1) + 1, player1);
+    n = write(newsockfd2, buffer, 255);
     if (n < 0) {
         error("Error on write");
     }
     printf("%s\n", buffer);
 
-    // BEGN PLAYER2
+    // BEGN PLAYER1
 
     bzero(buffer, 255); // clears the buffer
-    sprintf(buffer, "BEGN|%lu|O|%s|", strlen(player1) + 1, player1);
-    n = write(newsockfd2, buffer, strlen(buffer));
+    sprintf(buffer, "BEGN|%lu|X|%s|", strlen(player2) + 1, player2);
+    n = write(newsockfd1, buffer, 255);
     if (n < 0) {
         error("Error on write");
     }
@@ -186,17 +187,26 @@ int main(int argc, char** argv) {
             }
             printf("%s\n", buffer);
             success = interpret('X');
+
+            // CHECK FOR WINNER
+            printf("Checking for winner\n");
+            winner = checkWinner();
+            printf("winnerMark: %c\n", winner);
+            if (winner != ' ' || checkFreeSpaces() == 0) {
+                break;
+            }
+            printBoard();
             
-            bzero(buffer, 255);
-            n = write(newsockfd1, buffer, strlen(buffer));
+            n = write(newsockfd1, buffer, 255);
+            if (n < 0) {
+                error("Error on write");
+            }
+            n = write(newsockfd2, buffer, 255);
             if (n < 0) {
                 error("Error on write");
             }
             printf("%s\n", buffer);
         } while (success != 0);
-        // CHECK FOR WINNER
-        printf("Checking for winner\n");
-        winner = checkWinner();
         if (winner != ' ' || checkFreeSpaces() == 0) {
             break;
         }
@@ -208,25 +218,38 @@ int main(int argc, char** argv) {
                 error("Error on read");
             }
             printf("%s\n", buffer);
+
             success = interpret('O');
 
-            bzero(buffer, 255);
-            n = write(newsockfd2, buffer, strlen(buffer));
+            // CHECK FOR WINNER
+            printf("Checking for winner\n");
+            winner = checkWinner();
+            printf("winnerMark: %c\n", winner);
+            if (winner != ' ' || checkFreeSpaces() == 0) {
+                break;
+            }
+
+            n = write(newsockfd2, buffer, 255);
             if (n < 0) {
                 error("Error on write");
             }
+            n = write(newsockfd1, buffer, 255);
+            if (n < 0) {
+                error("Error on write");
+            }
+
             printf("%s\n", buffer);
         } while (success != 0);
-        // CHECK FOR WINNER
-        printf("Checking for winner\n");
-        winner = checkWinner();
         if (winner != ' ' || checkFreeSpaces() == 0) {
             break;
         }
     }
 
+
     printBoard();
-    printResult(winner);
+    printResult(winner, player1, player2);
+    n = write(newsockfd1, buffer, 255);
+    n = write(newsockfd2, buffer, 255);
 
     close(newsockfd1);
     close(sockfd);
@@ -256,8 +279,8 @@ void printBoard() {
 
 char* boardString() {
 
-    char* string = "";
-    sprintf(string, " %c | %c | %c \n---|---|---\n %c | %c | %c \n---|---|---\n %c | %c | %c \n", board[0][0], board[0][1], board[0][2], board[1][0], board[1][1], board[1][2], board[2][0], board[2][1], board[2][2]);
+    char string[100];
+    sprintf(string, "%c%c%c%c%c%c%c%c%c", board[0][0], board[0][1], board[0][2], board[1][0], board[1][1], board[1][2], board[2][0], board[2][1], board[2][2]);
     return string;
 
 }
@@ -271,6 +294,7 @@ int checkFreeSpaces() {
             }
         }
     }
+    printf("freespaces: %d\n", freeSpaces);
     return freeSpaces;
 }
 
@@ -284,21 +308,18 @@ int playerMove(int row, int col, char mark) {
     int success = 0;
     row--;
     col--;
+    printf("row: %d, col: %d\n", row, col);
 
     bzero(buffer, 255);
 
     if (board[row][col] != '.') { // INVALID MOVE
-
         success = 1;
         char* errorString = "Invalid move: position is already taken!";
         sprintf(buffer, "INVL|%lu|%s|", strlen(errorString) + 1, errorString);
-
     } else { // VALID MOVE
-
         board[row][col] = mark;
         char* board = boardString();
-        sprintf(buffer, "MOVD|%lu|%d,%d|%s|", strlen(board) + 5, row, col, board);
-
+        sprintf(buffer, "MOVD|%lu|%c|%d,%d|%s|", strlen(board) + 7, mark, row, col, board);
     }
 
     return success;
@@ -306,36 +327,39 @@ int playerMove(int row, int col, char mark) {
 }
 
 char checkWinner() { // returns the mark of the winner (otherwise returns nothing)
-    char blank = '.';
     // Check for row win
     for (int i = 0; i < 3; i++) {
-        if (strcmp(&board[i][0], &blank) != 0 && board[i][0] == board[i][1] && board[i][0] == board[i][2]) {
+        if (board[i][0] != '.' && (board[i][0] == board[i][1] && board[i][0] == board[i][2])) {
             return board[i][0];
         }
     }
     // Check for col win
     for (int i = 0; i < 3; i++) {
-        if (strcmp(&board[0][i], &blank) != 0 && board[0][i] == board[1][i] && board[0][i] == board[2][i]) {
+        if (board[0][i] != '.' && (board[0][i] == board[1][i] && board[0][i] == board[2][i])) {
             return board[0][i];
         }
     }
     // Check for diag win
-    if (strcmp(&board[0][0], &blank) != 0 && board[0][0] == board[1][1] && board[0][0] == board[2][2]) {
+    if (board[0][0] != '.' && (board[0][0] == board[1][1] && board[0][0] == board[2][2])) {
         return board[0][0];
     }
-    if (strcmp(&board[0][2], &blank) != 0 && board[0][2] == board[1][1] && board[0][2] == board[2][0]) {
+    if (board[0][2] != '.' && (board[0][2] == board[1][1] && board[0][2] == board[2][0])) {
         return board[0][2];
     }
     return ' ';
 }
 
-void printResult(char winner) {
+void printResult(char winner, char* player1, char* player2) {
+    bzero(buffer, 255);
     if (winner == 'X') {
         printf("PLAYER 1 WINS!\n");
+        sprintf(buffer, "OVER|%lu|W|%s wins.", strlen(player1) + 8, player1);
     } else if (winner == 'O') {
         printf("PLAYER 2 WINS\n");
+        sprintf(buffer, "OVER|%lu|W|%s wins.", strlen(player2) + 8, player2);
     } else {
         printf("TIE GAME!\n");
+        sprintf(buffer, "OVER|11|D|Tie game.");
     }
     return;
 }
