@@ -12,6 +12,7 @@
 // Global Variables
 
 char board[3][3];
+char name[50];
 char playerMark; // server will assign this client X or O
 char buffer[255];
 
@@ -74,15 +75,14 @@ int main(int argc, char** argv) {
     */
 
     bzero(buffer, 255);
-    char line[50];
     int len;
 
     printf("Enter player name: ");
-    fgets(line, 50, stdin);
-    line[strcspn(line, "\n")] = 0;
-    len = strlen(line) + 1;
+    fgets(name, 50, stdin);
+    name[strcspn(name, "\n")] = 0;
+    len = strlen(name) + 1;
 
-    sprintf(buffer, "PLAY|%d|%s|", len, line);
+    sprintf(buffer, "PLAY|%d|%s|", len, name);
 
     n = write(sockfd, buffer, 255);
     if (n < 0) {
@@ -288,6 +288,8 @@ void action() {
 
             success = 0;
         } else if (choice == 2) { // RSGN
+            bzero(buffer, 255);
+            sprintf(buffer, "RSGN|%lu|%s has resigned.|", strlen(name) + 15, name);
             success = 0;
         } else if (choice == 3) { // DRAW
             success = 0;

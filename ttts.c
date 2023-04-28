@@ -189,10 +189,12 @@ int main(int argc, char** argv) {
             success = interpret('X');
 
             // CHECK FOR WINNER
-            printf("Checking for winner\n");
             winner = checkWinner();
             printf("winnerMark: %c\n", winner);
             if (winner != ' ' || checkFreeSpaces() == 0) {
+                break;
+            }
+            if (success == 3) {
                 break;
             }
             printBoard();
@@ -206,8 +208,12 @@ int main(int argc, char** argv) {
                 error("Error on write");
             }
             printf("%s\n", buffer);
-        } while (success != 0);
+        } while (success == 1); // traditional win
         if (winner != ' ' || checkFreeSpaces() == 0) {
+            break;
+        }
+        if (success == 3) { // resign win
+            winner = '2';
             break;
         }
         // PLAYER 2's MOVE
@@ -222,10 +228,12 @@ int main(int argc, char** argv) {
             success = interpret('O');
 
             // CHECK FOR WINNER
-            printf("Checking for winner\n");
             winner = checkWinner();
             printf("winnerMark: %c\n", winner);
             if (winner != ' ' || checkFreeSpaces() == 0) {
+                break;
+            }
+            if (success == 3) {
                 break;
             }
 
@@ -239,8 +247,12 @@ int main(int argc, char** argv) {
             }
 
             printf("%s\n", buffer);
-        } while (success != 0);
+        } while (success == 1);
         if (winner != ' ' || checkFreeSpaces() == 0) {
+            break;
+        }
+        if (success == 3) { // resign win
+            winner = '1';
             break;
         }
     }
@@ -294,7 +306,6 @@ int checkFreeSpaces() {
             }
         }
     }
-    printf("freespaces: %d\n", freeSpaces);
     return freeSpaces;
 }
 
@@ -349,14 +360,29 @@ char checkWinner() { // returns the mark of the winner (otherwise returns nothin
     return ' ';
 }
 
+/*
+    winner values:
+    X - player 1 wins by traditional win
+    O - player 2 wins by traditional win
+    1 - player 1 wins by player 2 resignation
+    2 - player 2 wins by player 1 resignation
+    else - tie game
+*/
+
 void printResult(char winner, char* player1, char* player2) {
     bzero(buffer, 255);
     if (winner == 'X') {
         printf("PLAYER 1 WINS!\n");
-        sprintf(buffer, "OVER|%lu|W|%s wins.", strlen(player1) + 8, player1);
+        sprintf(buffer, "OVER|%lu|W|%s wins.|", strlen(player1) + 9, player1);
     } else if (winner == 'O') {
         printf("PLAYER 2 WINS\n");
-        sprintf(buffer, "OVER|%lu|W|%s wins.", strlen(player2) + 8, player2);
+        sprintf(buffer, "OVER|%lu|W|%s wins.|", strlen(player2) + 9, player2);
+    } else if (winner == '1') {
+        printf("PLAYER 1 WINS!\n");
+        sprintf(buffer, "OVER|%lu|W|%s has resigned.|", strlen(player2) + 16, player2);
+    } else if (winner == '2') {
+        printf("PLAYER 2 WINS!\n");
+        sprintf(buffer, "OVER|%lu|W|%s has resigned.|", strlen(player1) + 16, player1);
     } else {
         printf("TIE GAME!\n");
         sprintf(buffer, "OVER|11|D|Tie game.");
@@ -408,7 +434,9 @@ int interpret(char playerMark) {
         success = playerMove(row, col, playerMark);
 
     } else if (strcmp(tokens[0], "RSGN") == 0) {
-        
+
+        success = 3;
+
     } else { // Last case: DRAW
         
     }
