@@ -292,6 +292,8 @@ void action() {
             sprintf(buffer, "RSGN|%lu|%s has resigned.|", strlen(name) + 15, name);
             success = 0;
         } else if (choice == 3) { // DRAW
+            bzero(buffer, 255);
+            sprintf(buffer, "DRAW|2|S|");
             success = 0;
         } else { // INVALID INPUT; LOOP AGAIN
             success = 1;
@@ -305,6 +307,7 @@ void action() {
 */
 
 int reaction() {
+    int choice;
     char** array = split(buffer, "|");
     if (strcmp(array[0], "MOVD") == 0) {
         updateBoard(array[4]);
@@ -312,6 +315,21 @@ int reaction() {
     } else if (strcmp(array[0], "INVL") == 0) {
         return 1;
     } else if (strcmp(array[0], "DRAW") == 0) {
+        
+        printf("Your opponent requested a draw: \n");
+        printf("(1) Accept\n");
+        printf("(2) Reject\n");
+        scanf("%d", &choice);
+
+        if (choice == 1) { // accepting a draw
+            bzero(buffer, 255);
+            strcpy(buffer, "DRAW|2|A|");
+            return 3;
+        } else { // rejecting a draw
+            bzero(buffer, 255);
+            strcpy(buffer, "DRAW|2|R|");
+            return 0;
+        }
 
     } else { // "OVER"
         return 3;

@@ -142,7 +142,6 @@ int main(int argc, char** argv) {
     */
 
     /*
-        GAME BEGINS BELOW
         newsockfd1 = X
         newsockfd2 = O
     */
@@ -171,7 +170,7 @@ int main(int argc, char** argv) {
         GAME COMMENCES
     */
 
-    int success; // 0 - good; 1 - bad | used for controlling the do-while loop
+    int success; // this variable is controlled by interpret()
     char winner = ' '; 
     resetBoard();
 
@@ -190,18 +189,21 @@ int main(int argc, char** argv) {
 
             // CHECK FOR WINNER
             winner = checkWinner();
-            printf("winnerMark: %c\n", winner);
             if (winner != ' ' || checkFreeSpaces() == 0) {
                 break;
             }
-            if (success == 3) {
+            if (success == 3) { // resign win
+                break;
+            }
+            if (success == 4) { // draw accept
                 break;
             }
             printBoard();
-            
-            n = write(newsockfd1, buffer, 255);
-            if (n < 0) {
-                error("Error on write");
+            if (success != 2 && success != 5) { // this is so we don't send a draw request/reject to the client that requested it
+                n = write(newsockfd1, buffer, 255);
+                if (n < 0) {
+                    error("Error on write");
+                }
             }
             n = write(newsockfd2, buffer, 255);
             if (n < 0) {
@@ -214,6 +216,10 @@ int main(int argc, char** argv) {
         }
         if (success == 3) { // resign win
             winner = '2';
+            break;
+        }
+        if (success == 4) { // draw accept
+            winner = '.';
             break;
         }
         // PLAYER 2's MOVE
@@ -236,10 +242,14 @@ int main(int argc, char** argv) {
             if (success == 3) {
                 break;
             }
-
-            n = write(newsockfd2, buffer, 255);
-            if (n < 0) {
-                error("Error on write");
+            if (success == 4) { // draw accept
+                break;
+            }
+            if (success != 2 && success != 5) { // this is so we don't send a draw request to the client that requested it
+                n = write(newsockfd2, buffer, 255);
+                if (n < 0) {
+                    error("Error on write");
+                }
             }
             n = write(newsockfd1, buffer, 255);
             if (n < 0) {
@@ -253,6 +263,10 @@ int main(int argc, char** argv) {
         }
         if (success == 3) { // resign win
             winner = '1';
+            break;
+        }
+        if (success == 4) { // draw accept
+            winner = '.';
             break;
         }
     }
@@ -319,7 +333,6 @@ int playerMove(int row, int col, char mark) {
     int success = 0;
     row--;
     col--;
-    printf("row: %d, col: %d\n", row, col);
 
     bzero(buffer, 255);
 
@@ -416,6 +429,14 @@ char** split(char* string, char* delim) {
     This function is used to do several things:
     1. To read the message from the client and then react accordingly
     2. To fill the buffer with an appropriate message to send back to the client
+    3. To control the success variable using return statements:
+
+        0 - normal move
+        1 - invalid move
+        2 - draw request
+        3 - resignations
+        4 - draw accept
+        5 - draw reject
 
     Note: everything to do with sockets is done in the main function, therefore the only thing we can do is
     change the contents of the buffer.
@@ -439,6 +460,14 @@ int interpret(char playerMark) {
 
     } else { // Last case: DRAW
         
+        if (strcmp(tokens[2], "A") == 0) { // draw accept
+            success = 4;
+        } else if (strcmp(tokens[2], "R") == 0) { // draw reject
+            success = 5;
+        } else { // draw request
+            success = 2;
+        }
+
     }
 
     return success;
