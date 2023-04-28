@@ -71,7 +71,7 @@ int main(int argc, char** argv) {
 
     // LISTEN
 
-    listen(sockfd, 5);
+    listen(sockfd, 2);
 
     clilen1 = sizeof(cli_addr1);
     clilen2 = sizeof(cli_addr2);
